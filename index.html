@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Éxito Compartido · Panel de Ahorros y Retiros</title>
+<style>
+  :root{
+    --verde:#1fb15c; --verde-oscuro:#0b3d20; --negro:#0b0f0d;
+    --azul-oscuro:#0a2647; --dorado:#d4af37; --dorado-suave:#f0d98c;
+    --gris:#9fb0a8; --blanco:#f4f7f5; --rojo:#e74c3c;
+    --card:#101915; --card-2:#0d1f13; --borde:#1c2b22;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(160deg,var(--negro) 0%, var(--azul-oscuro) 120%);color:var(--blanco);min-height:100vh;}
+
+  #loginView{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+  .login-box{background:var(--card);border:1px solid var(--borde);border-radius:16px;padding:40px 36px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.5);}
+  .login-box h1{font-size:19px;color:var(--dorado);margin:0 0 4px;text-align:center;}
+  .login-box p.sub{color:var(--gris);text-align:center;margin:0 0 26px;font-size:13px;}
+  .badge-caja{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:18px;}
+  .badge-caja .dot{width:14px;height:14px;border-radius:50%;background:var(--verde);box-shadow:0 0 12px var(--verde);}
+  label{display:block;font-size:12px;color:var(--gris);margin:14px 0 6px;letter-spacing:.3px;}
+  input,select,textarea{width:100%;padding:11px 12px;border-radius:8px;border:1px solid var(--borde);background:#0a140f;color:var(--blanco);font-size:14px;outline:none;}
+  input:focus,select:focus{border-color:var(--verde);}
+  button{cursor:pointer;font-weight:600;border:none;border-radius:8px;padding:11px 16px;font-size:14px;}
+  .btn-primary{background:linear-gradient(120deg,var(--verde),#0e7a3d);color:#fff;width:100%;margin-top:22px;}
+  .btn-primary:hover{filter:brightness(1.1);}
+  .btn-gold{background:linear-gradient(120deg,var(--dorado),#b8912a);color:#111;}
+  .btn-ghost{background:transparent;color:var(--gris);border:1px solid var(--borde);}
+  #loginMsg{margin-top:14px;text-align:center;font-size:13px;color:var(--rojo);min-height:16px;}
+
+  #appView{display:none;min-height:100vh;}
+  .shell{display:flex;min-height:100vh;}
+  .sidebar{width:230px;background:linear-gradient(180deg,var(--negro),var(--card-2));border-right:1px solid var(--borde);padding:22px 14px;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:10px;padding:0 8px 20px;border-bottom:1px solid var(--borde);margin-bottom:16px;}
+  .brand .dot{width:12px;height:12px;border-radius:50%;background:var(--dorado);}
+  .brand h2{font-size:13px;margin:0;line-height:1.3;color:var(--dorado-suave);}
+  .brand small{color:var(--gris);font-size:10px;}
+  nav.menu{display:flex;flex-direction:column;gap:4px;}
+  nav.menu button{background:transparent;color:var(--gris);text-align:left;padding:10px 12px;border-radius:8px;font-size:13.5px;font-weight:500;}
+  nav.menu button:hover{background:#132018;color:var(--blanco);}
+  nav.menu button.active{background:linear-gradient(120deg,var(--verde-oscuro),#0d2c1a);color:var(--dorado-suave);border-left:3px solid var(--dorado);}
+  .content{flex:1;padding:26px 32px;overflow-x:auto;}
+  header.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;}
+  header.topbar h1{font-size:20px;margin:0;}
+  header.topbar .who{font-size:12px;color:var(--gris);}
+  .section{display:none;}
+  .section.active{display:block;animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:22px;}
+  .card{background:var(--card);border:1px solid var(--borde);border-radius:14px;padding:18px;}
+  .card .label{font-size:12px;color:var(--gris);margin-bottom:6px;}
+  .card .value{font-size:22px;font-weight:700;color:var(--dorado-suave);}
+  .card.green .value{color:var(--verde);}
+  .card.red .value{color:var(--rojo);}
+
+  .panel{background:var(--card);border:1px solid var(--borde);border-radius:14px;padding:22px;margin-bottom:20px;}
+  .panel h3{margin:0 0 16px;font-size:15px;color:var(--dorado-suave);border-bottom:1px solid var(--borde);padding-bottom:10px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+  @media (max-width:720px){.grid2,.grid3{grid-template-columns:1fr;}.shell{flex-direction:column;}.sidebar{width:100%;}}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th{text-align:left;color:var(--gris);font-weight:600;padding:9px 8px;border-bottom:1px solid var(--borde);white-space:nowrap;}
+  td{padding:9px 8px;border-bottom:1px solid #16221b;white-space:nowrap;}
+  tr:hover td{background:#0d1912;}
+  .tag{padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
+  .tag.ok{background:rgba(31,177,92,.18);color:var(--verde);}
+  .tag.warn{background:rgba(212,175,55,.18);color:var(--dorado);}
+  .tag.bad{background:rgba(231,76,60,.18);color:var(--rojo);}
+  .flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+  .flex-between{display:flex;justify-content:space-between;align-items:center;}
+  .muted{color:var(--gris);font-size:12px;}
+  .toast{position:fixed;bottom:20px;right:20px;background:var(--card);border:1px solid var(--verde);color:var(--blanco);padding:12px 18px;border-radius:10px;font-size:13px;box-shadow:0 10px 30px rgba(0,0,0,.4);display:none;z-index:99;}
+  .toast.error{border-color:var(--rojo);}
+  .search-row{display:flex;gap:10px;margin-bottom:14px;}
+  .search-row input{flex:1;}
+  .result-box{border:1px dashed var(--borde);border-radius:10px;padding:14px;margin-top:10px;min-height:40px;}
+  .warn-banner{background:rgba(212,175,55,.1);border:1px solid var(--dorado);color:var(--dorado-suave);padding:12px 16px;border-radius:10px;font-size:12.5px;margin-bottom:18px;}
+</style>
+</head>
+<body>
+
+<!-- ================= LOGIN ================= -->
+<div id="loginView">
+  <div class="login-box">
+    <div class="badge-caja"><div class="dot"></div><strong style="color:var(--dorado-suave)">ÉXITO COMPARTIDO</strong></div>
+    <h1>Panel de Ahorros y Retiros</h1>
+    <p class="sub">Acceso solo para administradores de este panel</p>
+    <label>Correo electrónico</label>
+    <input type="email" id="loginEmail" placeholder="admin.ahorros@exitocompartido.com">
+    <label>Contraseña</label>
+    <input type="password" id="loginPass" placeholder="••••••••">
+    <button class="btn-primary" onclick="hacerLogin()">Ingresar</button>
+    <div id="loginMsg"></div>
+  </div>
+</div>
+
+<!-- ================= APP ================= -->
+<div id="appView">
+<div class="shell">
+  <div class="sidebar">
+    <div class="brand"><div class="dot"></div><div><h2>ÉXITO<br>COMPARTIDO</h2><small>Ahorros y Retiros</small></div></div>
+    <nav class="menu">
+      <button class="active" data-sec="dashboard" onclick="irSeccion('dashboard')">📊 Dashboard</button>
+      <button data-sec="socios" onclick="irSeccion('socios')">🧑‍🤝‍🧑 Crear Socio / Acceso</button>
+      <button data-sec="ahorros" onclick="irSeccion('ahorros')">💰 Ahorros</button>
+      <button data-sec="creditos" onclick="irSeccion('creditos')">🏦 Créditos (vista)</button>
+      <button data-sec="capital" onclick="irSeccion('capital')">📈 Capital (vista)</button>
+      <button data-sec="polizas" onclick="irSeccion('polizas')">📄 Pólizas</button>
+      <button data-sec="admins" onclick="irSeccion('admins')">🛡️ Administradores</button>
+      <button data-sec="reportes" onclick="irSeccion('reportes')">🧾 Reportes</button>
+      <button data-sec="config" onclick="irSeccion('config')">⚙️ Configuración</button>
+      <button style="margin-top:16px;color:var(--rojo)" onclick="salir()">↩ Salir</button>
+    </nav>
+  </div>
+
+  <div class="content">
+    <header class="topbar">
+      <h1 id="tituloSeccion">Dashboard</h1>
+      <div class="who">Sesión: <strong id="whoName"></strong></div>
+    </header>
+
+    <!-- DASHBOARD -->
+    <section class="section active" id="sec-dashboard">
+      <div class="cards" id="cardsAhorros"></div>
+      <div class="panel">
+        <h3>Últimos movimientos de ahorros</h3>
+        <div style="overflow:auto"><table id="tblUltAhorros"><thead><tr><th>Fecha</th><th>Socio</th><th>Tipo</th><th>Monto</th><th>Saldo resultante</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- CREAR SOCIO / ACCESO -->
+    <section class="section" id="sec-socios">
+      <div class="warn-banner">Los socios <strong>capitalistas</strong> se vinculan (o se crean si no existen) en la hoja <strong>Socios</strong> del sistema de créditos/capital. Los socios <strong>ahorristas</strong> se vinculan (o se crean si no existen) en la hoja <strong>Clientes</strong> de ese mismo sistema. Ese sistema no se modifica en su código, solo se usa su API.</div>
+      <div class="panel">
+        <h3>Registrar / vincular socio y crear su acceso a banca web</h3>
+        <div class="grid3">
+          <div><label>Tipo de socio</label>
+            <select id="nsTipo">
+              <option value="ahorrista">Socio ahorrista (solo ahorros, pólizas, créditos)</option>
+              <option value="capitalista">Socio capitalista (además tiene capital)</option>
+            </select>
+          </div>
+          <div><label>Cédula</label><input id="nsCedula" placeholder="Cédula"></div>
+          <div><label>Teléfono</label><input id="nsTelefono" placeholder="Teléfono"></div>
+        </div>
+        <div class="grid3">
+          <div><label>Nombres</label><input id="nsNombres"></div>
+          <div><label>Apellidos</label><input id="nsApellidos"></div>
+          <div><label>Email</label><input id="nsEmail" type="email"></div>
+        </div>
+        <label>Contraseña de acceso a la banca web</label>
+        <input id="nsPass" placeholder="Contraseña para el socio">
+        <button class="btn-primary" onclick="crearSocioAcceso()">Vincular / crear socio y generar acceso</button>
+        <div id="nsMsg" class="muted" style="margin-top:10px"></div>
+      </div>
+      <div class="panel">
+        <h3>Socios con acceso a banca web</h3>
+        <div style="overflow:auto"><table id="tblAccesos"><thead><tr><th>Cédula</th><th>Nombre</th><th>Tipo</th><th>Último acceso</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- AHORROS -->
+    <section class="section" id="sec-ahorros">
+      <div class="panel">
+        <h3>Buscar socio para gestionar su ahorro</h3>
+        <div class="search-row">
+          <input id="cedulaAhorro" placeholder="Cédula del socio">
+          <button class="btn-gold" onclick="buscarAhorroCliente()">Buscar</button>
+        </div>
+        <div id="fichaAhorro" class="result-box">Ingresa una cédula para ver el detalle.</div>
+      </div>
+
+      <div class="panel" id="panelMovAhorro" style="display:none">
+        <h3>Registrar depósito / retiro</h3>
+        <div class="grid3">
+          <div><label>Tipo de movimiento</label>
+            <select id="tipoMovAhorro">
+              <option value="deposito">Depósito (suma)</option>
+              <option value="retiro">Retiro (resta)</option>
+            </select>
+          </div>
+          <div><label>Monto ($)</label><input type="number" id="montoMovAhorro" step="0.01" min="0"></div>
+          <div><label>Registrado por</label><input id="registradoPorAhorro" placeholder="Nombre del cajero/admin"></div>
+        </div>
+        <label>Descripción</label>
+        <input id="descMovAhorro" placeholder="Ej: Depósito en efectivo, ventanilla">
+        <button class="btn-primary" onclick="registrarMovimientoAhorro()">Confirmar movimiento</button>
+      </div>
+
+      <div class="panel" id="panelHistAhorro" style="display:none">
+        <h3>Historial de movimientos</h3>
+        <div style="overflow:auto"><table id="tblHistAhorro"><thead><tr><th>Fecha</th><th>Tipo</th><th>Monto</th><th>Saldo anterior</th><th>Saldo resultante</th><th>Descripción</th><th>Registrado por</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- CREDITOS (vista, viene del sistema de créditos por HTTP) -->
+    <section class="section" id="sec-creditos">
+      <div class="panel">
+        <h3>Créditos (información del sistema de créditos)</h3>
+        <div class="search-row">
+          <input id="cedulaCredito" placeholder="Cédula del cliente (déjalo vacío para ver todos)">
+          <button class="btn-gold" onclick="cargarCreditos()">Buscar</button>
+        </div>
+        <div style="overflow:auto"><table id="tblCreditos"><thead><tr><th>Código</th><th>Cliente</th><th>Monto</th><th>Saldo</th><th>Tasa mensual</th><th>Cuotas</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- CAPITAL (vista, viene del sistema de créditos por HTTP) -->
+    <section class="section" id="sec-capital">
+      <div class="panel">
+        <h3>Socios capitalistas (información del sistema de créditos)</h3>
+        <div style="overflow:auto"><table id="tblSocios"><thead><tr><th>Cédula</th><th>Nombres</th><th>Apellidos</th><th>Ingreso</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div class="panel">
+        <h3>Últimos movimientos de capital</h3>
+        <div style="overflow:auto"><table id="tblCapital"><thead><tr><th>Fecha</th><th>Socio</th><th>Tipo</th><th>Monto</th><th>Descripción</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <p class="muted">Los movimientos de capital (aportes, retiros, dividendos) se registran desde el panel del sistema de créditos/capital; aquí solo se muestran en modo lectura.</p>
+    </section>
+
+    <!-- POLIZAS -->
+    <section class="section" id="sec-polizas">
+      <div class="panel">
+        <h3>Crear nueva póliza de inversión</h3>
+        <div class="grid3">
+          <div><label>Cédula del socio</label><input id="polizaCedula" placeholder="Cédula"></div>
+          <div><label>Nombre</label><input id="polizaNombre" placeholder="Se autocompleta al buscar" readonly></div>
+          <div><label>Monto invertido ($)</label><input type="number" id="polizaMonto" step="0.01"></div>
+        </div>
+        <div class="grid3">
+          <div><label>Tasa anual (%)</label><input type="number" id="polizaTasa" step="0.01" placeholder="Ej: 7"></div>
+          <div><label>Plazo (meses)</label><input type="number" id="polizaPlazo" placeholder="Ej: 12"></div>
+          <div><label>Fecha de inicio</label><input type="date" id="polizaFecha"></div>
+        </div>
+        <label>Observaciones</label>
+        <input id="polizaObs" placeholder="Notas adicionales">
+        <div class="flex" style="margin-top:14px">
+          <button class="btn-ghost" onclick="buscarSocioParaPoliza()">Buscar socio por cédula</button>
+          <button class="btn-primary" style="margin-top:0" onclick="crearPoliza()">Crear póliza</button>
+        </div>
+      </div>
+      <div class="panel">
+        <h3>Pólizas registradas</h3>
+        <div style="overflow:auto"><table id="tblPolizas"><thead><tr><th>Socio</th><th>Monto</th><th>Tasa</th><th>Plazo</th><th>Inicio</th><th>Vence</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- ADMINISTRADORES -->
+    <section class="section" id="sec-admins">
+      <div class="panel">
+        <h3>Crear nuevo administrador de este panel</h3>
+        <div class="grid2">
+          <div><label>Nombre completo</label><input id="adminNombre"></div>
+          <div><label>Correo electrónico</label><input id="adminEmail" type="email"></div>
+        </div>
+        <div class="grid2">
+          <div><label>Contraseña</label><input id="adminPass"></div>
+          <div><label>Rol</label>
+            <select id="adminRol">
+              <option value="admin">Administrador</option>
+              <option value="cajero">Cajero</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary" onclick="crearAdmin()">Crear administrador</button>
+      </div>
+      <div class="panel">
+        <h3>Administradores actuales</h3>
+        <div style="overflow:auto"><table id="tblAdmins"><thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- REPORTES -->
+    <section class="section" id="sec-reportes">
+      <div class="panel">
+        <h3>Reportes generales</h3>
+        <div class="flex" style="margin-bottom:16px">
+          <button class="btn-gold" onclick="reporte('ahorros')">Reporte de ahorros</button>
+          <button class="btn-gold" onclick="reporte('polizas')">Reporte de pólizas</button>
+          <button class="btn-gold" onclick="reporte('capitalistas')">Reporte de capitalistas</button>
+          <button class="btn-gold" onclick="reporte('ahorristas')">Reporte de ahorristas</button>
+        </div>
+        <div style="overflow:auto"><table id="tblReporte"><thead></thead><tbody></tbody></table></div>
+      </div>
+    </section>
+
+    <!-- CONFIGURACION -->
+    <section class="section" id="sec-config">
+      <div class="panel">
+        <h3>Parámetros del sistema</h3>
+        <p class="muted">Estas tasas se usan para calcular automáticamente los intereses mensuales de los ahorros y el rendimiento por defecto de las pólizas.</p>
+        <div class="grid2">
+          <div><label>Tasa de interés ANUAL de ahorros (%)</label><input type="number" id="cfgTasaAhorros" step="0.01"></div>
+          <div><label>Tasa de interés ANUAL de pólizas (%)</label><input type="number" id="cfgTasaPolizas" step="0.01"></div>
+        </div>
+        <label>Nombre comercial de la caja</label>
+        <input id="cfgNombreCaja">
+        <button class="btn-primary" onclick="guardarConfig()">Guardar configuración</button>
+      </div>
+      <div class="panel">
+        <h3>Cálculo de intereses de ahorros</h3>
+        <p class="muted">Puedes dejar que se calcule solo (trigger mensual configurado en Apps Script) o forzarlo aquí mismo.</p>
+        <button class="btn-gold" onclick="calcularInteresesAhora()">Calcular intereses del mes ahora</button>
+        <div id="interesesMsg" class="muted" style="margin-top:10px"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIGURACIÓN DE CONEXIÓN
+   ============================================================ */
+// 🔗 URL del NUEVO Apps Script de Ahorros y Retiros (reemplaza esto
+//    después de implementar apps-script-ahorros/Codigo.gs como app web)
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4b-VtgoJWJxW2nfY7JWahCc2Kx3vFF5N8c16GwkLmGBaw0xOshO6-U1BaWJtPwvdM/exec";
+
+async function api(payload){
+  try{
+    const res = await fetch(APPS_SCRIPT_URL, {
+      method: 'POST',
+      headers: {'Content-Type':'text/plain;charset=utf-8'},
+      body: JSON.stringify(payload)
+    });
+    const json = await res.json();
+    if(!json.ok) throw new Error(json.error || 'Error desconocido');
+    return json.data;
+  }catch(err){
+    mostrarToast(err.message, true);
+    throw err;
+  }
+}
+
+function mostrarToast(msg, error=false){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (error ? ' error' : '');
+  t.style.display = 'block';
+  setTimeout(()=> t.style.display='none', 3800);
+}
+function money(n){ return '$' + (parseFloat(n)||0).toLocaleString('es-EC',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+
+/* ============================================================
+   LOGIN (Usuarios de ESTE panel)
+   ============================================================ */
+let SESION = null;
+
+async function hacerLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  if(!email || !pass){ document.getElementById('loginMsg').textContent = 'Completa correo y contraseña'; return; }
+  try{
+    const data = await api({accion:'login', email, pass});
+    if(data.ok){
+      SESION = data.usuario;
+      document.getElementById('loginView').style.display='none';
+      document.getElementById('appView').style.display='block';
+      document.getElementById('whoName').textContent = SESION.nombre + ' (' + SESION.rol + ')';
+      cargarDashboard();
+    } else {
+      document.getElementById('loginMsg').textContent = data.msg || 'Credenciales incorrectas';
+    }
+  }catch(e){}
+}
+function salir(){
+  SESION = null;
+  document.getElementById('appView').style.display='none';
+  document.getElementById('loginView').style.display='flex';
+  document.getElementById('loginPass').value='';
+}
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+const TITULOS = {
+  dashboard:'Dashboard', socios:'Crear Socio / Acceso', ahorros:'Ahorros', creditos:'Créditos (vista)',
+  capital:'Capital (vista)', polizas:'Pólizas de Inversión', admins:'Administradores',
+  reportes:'Reportes', config:'Configuración del sistema'
+};
+function irSeccion(sec){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+sec).classList.add('active');
+  document.querySelectorAll('nav.menu button').forEach(b=>b.classList.remove('active'));
+  const btn = document.querySelector('nav.menu button[data-sec="'+sec+'"]');
+  if(btn) btn.classList.add('active');
+  document.getElementById('tituloSeccion').textContent = TITULOS[sec] || sec;
+
+  if(sec==='dashboard') cargarDashboard();
+  if(sec==='socios') cargarAccesos();
+  if(sec==='creditos') cargarCreditos();
+  if(sec==='capital') cargarCapital();
+  if(sec==='polizas') cargarPolizas();
+  if(sec==='admins') cargarAdmins();
+  if(sec==='config') cargarConfig();
+}
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+async function cargarDashboard(){
+  const a = await api({accion:'dashboard'});
+  document.getElementById('cardsAhorros').innerHTML = `
+    <div class="card green"><div class="label">Saldo total en ahorros</div><div class="value">${money(a.saldoTotal)}</div></div>
+    <div class="card"><div class="label">Cuentas de ahorro</div><div class="value">${a.totalCuentas}</div></div>
+    <div class="card"><div class="label">Socios capitalistas vinculados</div><div class="value">${a.totalCapitalistas}</div></div>
+    <div class="card"><div class="label">Socios ahorristas vinculados</div><div class="value">${a.totalAhorristas}</div></div>
+    <div class="card"><div class="label">Depósitos del mes</div><div class="value">${money(a.depositosMes)}</div></div>
+    <div class="card red"><div class="label">Retiros del mes</div><div class="value">${money(a.retirosMes)}</div></div>
+  `;
+  document.querySelector('#tblUltAhorros tbody').innerHTML = a.ultimosMovimientos.map(m=>`
+    <tr><td>${m.Fecha}</td><td>${m.Nombre}</td>
+    <td><span class="tag ${m.Tipo==='retiro'?'bad':m.Tipo==='interes'?'warn':'ok'}">${m.Tipo}</span></td>
+    <td>${money(m.Monto)}</td><td>${money(m.SaldoResultante)}</td></tr>
+  `).join('') || '<tr><td colspan="5" class="muted">Sin movimientos aún</td></tr>';
+}
+
+/* ============================================================
+   CREAR SOCIO / ACCESO
+   ============================================================ */
+async function crearSocioAcceso(){
+  const datos = {
+    TipoSocio: document.getElementById('nsTipo').value,
+    Cedula: document.getElementById('nsCedula').value.trim(),
+    Nombres: document.getElementById('nsNombres').value.trim(),
+    Apellidos: document.getElementById('nsApellidos').value.trim(),
+    Telefono: document.getElementById('nsTelefono').value.trim(),
+    Email: document.getElementById('nsEmail').value.trim(),
+    Pass: document.getElementById('nsPass').value,
+  };
+  if(!datos.Cedula || !datos.Nombres || !datos.Pass){ mostrarToast('Completa cédula, nombres y contraseña', true); return; }
+
+  const r = await api({accion:'crear_socio_acceso', datos});
+  document.getElementById('nsMsg').textContent = r.msg + ' → ' + r.nombreCompleto;
+  mostrarToast(r.msg);
+  ['nsCedula','nsNombres','nsApellidos','nsTelefono','nsEmail','nsPass'].forEach(id=>document.getElementById(id).value='');
+  cargarAccesos();
+}
+
+async function cargarAccesos(){
+  const accesos = await api({accion:'leer_local', tab:'accesos'});
+  document.querySelector('#tblAccesos tbody').innerHTML = accesos.map(a=>`
+    <tr><td>${a.Cedula}</td><td>${a.Nombre}</td>
+    <td><span class="tag ${a.TipoSocio==='capitalista'?'warn':'ok'}">${a.TipoSocio}</span></td>
+    <td>${a.UltimoAcceso||'Nunca'}</td>
+    <td><span class="tag ${a.Activo===true||a.Activo==='true'?'ok':'bad'}">${a.Activo===true||a.Activo==='true'?'Activo':'Inactivo'}</span></td></tr>
+  `).join('') || '<tr><td colspan="5" class="muted">Aún no hay socios con acceso</td></tr>';
+}
+
+/* ============================================================
+   AHORROS
+   ============================================================ */
+let socioAhorroActual = null;
+
+async function buscarAhorroCliente(){
+  const cedula = document.getElementById('cedulaAhorro').value.trim();
+  if(!cedula) return;
+  const info = await api({accion:'resumen_cedula', cedula});
+  const ficha = document.getElementById('fichaAhorro');
+  if(!info.ahorro && !info.clienteRemoto && !info.socioRemoto){
+    ficha.innerHTML = '<span class="muted">No se encontró información para esa cédula. Primero créalo en "Crear Socio / Acceso".</span>';
+    document.getElementById('panelMovAhorro').style.display='none';
+    document.getElementById('panelHistAhorro').style.display='none';
+    return;
+  }
+  socioAhorroActual = { cedula, nombre: info.ahorro ? info.ahorro.Nombre : (info.clienteRemoto ? info.clienteRemoto.Nombres+' '+info.clienteRemoto.Apellidos : (info.socioRemoto ? info.socioRemoto.Nombres+' '+info.socioRemoto.Apellidos : '')) };
+  const saldo = info.ahorro ? info.ahorro.SaldoActual : 0;
+  ficha.innerHTML = `
+    <div class="flex-between">
+      <div><strong>${socioAhorroActual.nombre}</strong><br><span class="muted">Cédula: ${cedula} · Tipo: ${info.tipoSocio||'no registrado en accesos'}</span></div>
+      <div style="text-align:right"><div class="muted">Saldo actual</div><div style="font-size:22px;color:var(--dorado-suave);font-weight:700">${money(saldo)}</div></div>
+    </div>`;
+  document.getElementById('panelMovAhorro').style.display='block';
+  document.getElementById('panelHistAhorro').style.display='block';
+  document.querySelector('#tblHistAhorro tbody').innerHTML = (info.movimientosAhorro||[]).map(m=>`
+    <tr><td>${m.Fecha}</td><td><span class="tag ${m.Tipo==='retiro'?'bad':m.Tipo==='interes'?'warn':'ok'}">${m.Tipo}</span></td>
+    <td>${money(m.Monto)}</td><td>${money(m.SaldoAnterior)}</td><td>${money(m.SaldoResultante)}</td>
+    <td>${m.Descripcion||''}</td><td>${m.RegistradoPor||''}</td></tr>
+  `).join('') || '<tr><td colspan="7" class="muted">Sin movimientos aún</td></tr>';
+}
+
+async function registrarMovimientoAhorro(){
+  if(!socioAhorroActual){ mostrarToast('Primero busca un socio', true); return; }
+  const tipo = document.getElementById('tipoMovAhorro').value;
+  const monto = document.getElementById('montoMovAhorro').value;
+  const desc = document.getElementById('descMovAhorro').value;
+  const registradoPor = document.getElementById('registradoPorAhorro').value || (SESION ? SESION.nombre : '');
+  if(!monto || parseFloat(monto)<=0){ mostrarToast('Ingresa un monto válido', true); return; }
+
+  const resp = await api({accion:'movimiento_ahorro', datos:{
+    Cedula: socioAhorroActual.cedula, Nombre: socioAhorroActual.nombre,
+    Tipo: tipo, Monto: monto, Descripcion: desc, RegistradoPor: registradoPor
+  }});
+  if(resp.ok){
+    mostrarToast('Movimiento registrado correctamente');
+    document.getElementById('montoMovAhorro').value='';
+    document.getElementById('descMovAhorro').value='';
+    buscarAhorroCliente();
+  } else {
+    mostrarToast(resp.msg || 'No se pudo registrar el movimiento', true);
+  }
+}
+
+/* ============================================================
+   CREDITOS (vista remota)
+   ============================================================ */
+async function cargarCreditos(){
+  const cedula = document.getElementById('cedulaCredito').value.trim();
+  let creditos;
+  if(cedula){
+    const info = await api({accion:'resumen_cedula', cedula});
+    creditos = info.creditos || [];
+  } else {
+    creditos = await api({accion:'leer_remoto', tab:'creditos'});
+  }
+  document.querySelector('#tblCreditos tbody').innerHTML = creditos.map(c=>`
+    <tr><td>${c.Codigo||''}</td><td>${c.ClienteNombre||''}</td><td>${money(c.MontoOriginal)}</td><td>${money(c.Saldo)}</td>
+    <td>${c.TasaMensual}%</td><td>${c.NumCuotas}</td>
+    <td><span class="tag ${c.Estado==='en_mora'?'bad':c.Estado==='cancelado'?'ok':'warn'}">${c.Estado||''}</span></td></tr>
+  `).join('') || '<tr><td colspan="7" class="muted">No hay créditos para mostrar</td></tr>';
+}
+
+/* ============================================================
+   CAPITAL (vista remota)
+   ============================================================ */
+async function cargarCapital(){
+  const socios = await api({accion:'leer_remoto', tab:'socios'});
+  document.querySelector('#tblSocios tbody').innerHTML = socios.map(s=>`
+    <tr><td>${s.Cedula}</td><td>${s.Nombres}</td><td>${s.Apellidos}</td><td>${s.FechaIngreso||''}</td>
+    <td><span class="tag ${s.Activo===true||s.Activo==='true'?'ok':'bad'}">${s.Activo===true||s.Activo==='true'?'Activo':'Inactivo'}</span></td></tr>
+  `).join('') || '<tr><td colspan="5" class="muted">No hay socios registrados</td></tr>';
+
+  const movs = await api({accion:'leer_remoto', tab:'capital'});
+  document.querySelector('#tblCapital tbody').innerHTML = [...movs].sort((a,b)=>String(b.Fecha).localeCompare(String(a.Fecha))).slice(0,50).map(m=>`
+    <tr><td>${m.Fecha}</td><td>${m.SocioNombre}</td>
+    <td><span class="tag ${m.Tipo==='aporte'?'ok':'bad'}">${m.Tipo}</span></td>
+    <td>${money(m.Monto)}</td><td>${m.Descripcion||''}</td></tr>
+  `).join('') || '<tr><td colspan="5" class="muted">Sin movimientos</td></tr>';
+}
+
+/* ============================================================
+   POLIZAS (locales)
+   ============================================================ */
+async function buscarSocioParaPoliza(){
+  const cedula = document.getElementById('polizaCedula').value.trim();
+  const info = await api({accion:'resumen_cedula', cedula});
+  const nombre = info.ahorro ? info.ahorro.Nombre : (info.clienteRemoto ? info.clienteRemoto.Nombres+' '+info.clienteRemoto.Apellidos : (info.socioRemoto ? info.socioRemoto.Nombres+' '+info.socioRemoto.Apellidos : ''));
+  if(!nombre){ mostrarToast('Socio no encontrado', true); return; }
+  document.getElementById('polizaNombre').value = nombre;
+}
+
+async function crearPoliza(){
+  const cedula = document.getElementById('polizaCedula').value.trim();
+  const nombre = document.getElementById('polizaNombre').value;
+  if(!cedula || !nombre){ mostrarToast('Primero busca el socio por cédula', true); return; }
+  const inicio = document.getElementById('polizaFecha').value || new Date().toISOString().slice(0,10);
+  const plazo = parseInt(document.getElementById('polizaPlazo').value || 0);
+  const venceDate = new Date(inicio+'T12:00:00'); venceDate.setMonth(venceDate.getMonth()+plazo);
+  const vence = venceDate.toISOString().slice(0,10);
+
+  await api({accion:'agregar_local', tab:'polizas', datos:{
+    Cedula: cedula, Nombre: nombre,
+    Monto: document.getElementById('polizaMonto').value,
+    TasaAnual: document.getElementById('polizaTasa').value,
+    PlazoMeses: plazo, FechaInicio: inicio, FechaVencimiento: vence,
+    Estado: 'activa', Observaciones: document.getElementById('polizaObs').value
+  }});
+  mostrarToast('Póliza creada correctamente');
+  cargarPolizas();
+}
+
+async function cargarPolizas(){
+  const polizas = await api({accion:'leer_local', tab:'polizas'});
+  document.querySelector('#tblPolizas tbody').innerHTML = polizas.map(p=>`
+    <tr><td>${p.Nombre}</td><td>${money(p.Monto)}</td><td>${p.TasaAnual}%</td><td>${p.PlazoMeses} meses</td>
+    <td>${p.FechaInicio}</td><td>${p.FechaVencimiento}</td>
+    <td><span class="tag ${p.Estado==='activa'?'ok':'warn'}">${p.Estado}</span></td></tr>
+  `).join('') || '<tr><td colspan="7" class="muted">No hay pólizas registradas</td></tr>';
+}
+
+/* ============================================================
+   ADMINISTRADORES (locales)
+   ============================================================ */
+async function crearAdmin(){
+  const nombre = document.getElementById('adminNombre').value.trim();
+  const email = document.getElementById('adminEmail').value.trim();
+  const pass = document.getElementById('adminPass').value;
+  const rol = document.getElementById('adminRol').value;
+  if(!nombre || !email || !pass){ mostrarToast('Completa todos los campos', true); return; }
+
+  await api({accion:'agregar_local', tab:'usuarios', datos:{Nombre:nombre, Email:email, Pass:pass, Rol:rol, Activo:true}});
+  mostrarToast('Administrador creado correctamente');
+  document.getElementById('adminNombre').value='';
+  document.getElementById('adminEmail').value='';
+  document.getElementById('adminPass').value='';
+  cargarAdmins();
+}
+
+async function cargarAdmins(){
+  const usuarios = await api({accion:'leer_local', tab:'usuarios'});
+  document.querySelector('#tblAdmins tbody').innerHTML = usuarios.map(u=>`
+    <tr><td>${u.Nombre}</td><td>${u.Email}</td><td>${u.Rol}</td>
+    <td><span class="tag ${u.Activo===true||u.Activo==='true'?'ok':'bad'}">${u.Activo===true||u.Activo==='true'?'Activo':'Inactivo'}</span></td></tr>
+  `).join('') || '<tr><td colspan="4" class="muted">Sin administradores</td></tr>';
+}
+
+/* ============================================================
+   REPORTES
+   ============================================================ */
+async function reporte(tipo){
+  const tbl = document.getElementById('tblReporte');
+  if(tipo==='ahorros'){
+    const movs = await api({accion:'leer_local', tab:'movs'});
+    tbl.querySelector('thead').innerHTML = '<tr><th>Fecha</th><th>Socio</th><th>Tipo</th><th>Monto</th><th>Saldo resultante</th></tr>';
+    tbl.querySelector('tbody').innerHTML = movs.map(m=>`<tr><td>${m.Fecha}</td><td>${m.Nombre}</td><td>${m.Tipo}</td><td>${money(m.Monto)}</td><td>${money(m.SaldoResultante)}</td></tr>`).join('');
+  } else if(tipo==='polizas'){
+    const polizas = await api({accion:'leer_local', tab:'polizas'});
+    tbl.querySelector('thead').innerHTML = '<tr><th>Socio</th><th>Monto</th><th>Tasa</th><th>Vence</th><th>Estado</th></tr>';
+    tbl.querySelector('tbody').innerHTML = polizas.map(p=>`<tr><td>${p.Nombre}</td><td>${money(p.Monto)}</td><td>${p.TasaAnual}%</td><td>${p.FechaVencimiento}</td><td>${p.Estado}</td></tr>`).join('');
+  } else if(tipo==='capitalistas'){
+    const accesos = await api({accion:'leer_local', tab:'accesos'});
+    const cap = accesos.filter(a=>a.TipoSocio==='capitalista');
+    tbl.querySelector('thead').innerHTML = '<tr><th>Cédula</th><th>Nombre</th><th>Último acceso</th><th>Estado</th></tr>';
+    tbl.querySelector('tbody').innerHTML = cap.map(a=>`<tr><td>${a.Cedula}</td><td>${a.Nombre}</td><td>${a.UltimoAcceso||'Nunca'}</td><td>${a.Activo?'Activo':'Inactivo'}</td></tr>`).join('');
+  } else if(tipo==='ahorristas'){
+    const accesos = await api({accion:'leer_local', tab:'accesos'});
+    const ahr = accesos.filter(a=>a.TipoSocio==='ahorrista');
+    tbl.querySelector('thead').innerHTML = '<tr><th>Cédula</th><th>Nombre</th><th>Último acceso</th><th>Estado</th></tr>';
+    tbl.querySelector('tbody').innerHTML = ahr.map(a=>`<tr><td>${a.Cedula}</td><td>${a.Nombre}</td><td>${a.UltimoAcceso||'Nunca'}</td><td>${a.Activo?'Activo':'Inactivo'}</td></tr>`).join('');
+  }
+}
+
+/* ============================================================
+   CONFIGURACION
+   ============================================================ */
+async function cargarConfig(){
+  const cfg = await api({accion:'config_get'});
+  const get = clave => (cfg.find(c=>c.Clave===clave)||{}).Valor || '';
+  document.getElementById('cfgTasaAhorros').value = get('TasaAhorros') || 4;
+  document.getElementById('cfgTasaPolizas').value = get('TasaPolizas') || 7;
+  document.getElementById('cfgNombreCaja').value = get('NombreCaja') || 'Caja de Ahorro y Crédito Éxito Compartido';
+}
+
+async function guardarConfig(){
+  await api({accion:'config_set', datos:{Clave:'TasaAhorros', Valor: document.getElementById('cfgTasaAhorros').value}});
+  await api({accion:'config_set', datos:{Clave:'TasaPolizas', Valor: document.getElementById('cfgTasaPolizas').value}});
+  await api({accion:'config_set', datos:{Clave:'NombreCaja', Valor: document.getElementById('cfgNombreCaja').value}});
+  mostrarToast('Configuración guardada correctamente');
+}
+
+async function calcularInteresesAhora(){
+  const r = await api({accion:'calcular_intereses_ahorros'});
+  document.getElementById('interesesMsg').textContent = `Se procesaron ${r.cuentasProcesadas} cuentas de ahorro.`;
+  mostrarToast('Intereses calculados y aplicados');
+}
+</script>
+</body>
+</html>
