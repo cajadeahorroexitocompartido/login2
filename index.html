@@ -282,12 +282,39 @@
     <!-- REPORTES -->
     <section class="section" id="sec-reportes">
       <div class="panel">
-        <h3>Reportes generales</h3>
+        <h3>Reporte financiero (ahorros y pólizas)</h3>
+        <div class="grid3">
+          <div><label>Fecha desde</label><input type="date" id="repDesde"></div>
+          <div><label>Fecha hasta</label><input type="date" id="repHasta"></div>
+          <div style="display:flex;align-items:flex-end">
+            <button class="btn-primary" style="margin-top:0;width:100%" onclick="generarReporteFinanciero()">Generar reporte</button>
+          </div>
+        </div>
+        <div class="cards" id="cardsReporteFinanciero" style="margin-top:18px"></div>
+      </div>
+
+      <div class="panel">
+        <div class="flex-between">
+          <h3 style="margin:0;border:none;padding:0">Detalle de movimientos de ahorro en el período</h3>
+          <button class="btn-ghost" onclick="descargarMovimientosCSV()">Descargar CSV</button>
+        </div>
+        <p class="muted" style="margin:8px 0 14px">Incluye depósitos, retiros, intereses de ahorro e intereses/capital de pólizas cerradas — todo lo que afecta el saldo de ahorros de los socios.</p>
+        <div style="overflow:auto"><table id="tblMovsReporte"><thead><tr><th>Fecha</th><th>Socio</th><th>Categoría</th><th>Monto</th><th>Descripción</th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <div class="flex-between">
+          <h3 style="margin:0;border:none;padding:0">Pólizas finalizadas en el período</h3>
+          <button class="btn-ghost" onclick="descargarPolizasCSV()">Descargar CSV</button>
+        </div>
+        <div style="overflow:auto;margin-top:14px"><table id="tblPolizasReporte"><thead><tr><th>Socio</th><th>Capital</th><th>Tasa anual</th><th>Plazo</th><th>Vencimiento</th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="panel">
+        <h3>Listados de socios</h3>
         <div class="flex" style="margin-bottom:16px">
-          <button class="btn-gold" onclick="reporte('ahorros')">Reporte de ahorros</button>
-          <button class="btn-gold" onclick="reporte('polizas')">Reporte de pólizas</button>
-          <button class="btn-gold" onclick="reporte('capitalistas')">Reporte de capitalistas</button>
-          <button class="btn-gold" onclick="reporte('ahorristas')">Reporte de ahorristas</button>
+          <button class="btn-gold" onclick="reporte('capitalistas')">Socios capitalistas</button>
+          <button class="btn-gold" onclick="reporte('ahorristas')">Socios ahorristas</button>
         </div>
         <div style="overflow:auto"><table id="tblReporte"><thead></thead><tbody></tbody></table></div>
       </div>
@@ -405,6 +432,7 @@ function irSeccion(sec){
   if(sec==='polizas') cargarPolizas();
   if(sec==='admins') cargarAdmins();
   if(sec==='config') cargarConfig();
+  if(sec==='reportes') inicializarReportes();
 }
 
 /* ============================================================
@@ -624,19 +652,123 @@ async function cargarAdmins(){
 }
 
 /* ============================================================
-   REPORTES
+   REPORTES FINANCIEROS (ahorros y pólizas, filtrados por fecha)
+   ============================================================ */
+let MOVS_REPORTE_ACTUAL = [];
+let POLIZAS_REPORTE_ACTUAL = [];
+
+function inicializarReportes(){
+  const hastaEl = document.getElementById('repHasta');
+  const desdeEl = document.getElementById('repDesde');
+  if(!hastaEl.value){
+    const hoy = new Date();
+    const primerDiaMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+    desdeEl.value = primerDiaMes.toISOString().slice(0,10);
+    hastaEl.value = hoy.toISOString().slice(0,10);
+  }
+  generarReporteFinanciero();
+}
+
+// Clasifica cada movimiento de ahorro en una categoría contable,
+// usando su Tipo y su Descripción (los cierres de pólizas dejan una
+// descripción reconocible, generada por el propio sistema).
+function categorizarMovimiento(m){
+  const desc = (m.Descripcion || '').toLowerCase();
+  if (m.Tipo === 'deposito' && desc.includes('póliza')) return 'Devolución de capital (póliza)';
+  if (m.Tipo === 'deposito') return 'Depósito de ahorro';
+  if (m.Tipo === 'retiro') return 'Retiro de ahorro';
+  if (m.Tipo === 'interes' && desc.includes('póliza')) return 'Interés pagado (póliza)';
+  if (m.Tipo === 'interes') return 'Interés pagado (ahorros)';
+  return m.Tipo;
+}
+
+async function generarReporteFinanciero(){
+  const desde = document.getElementById('repDesde').value;
+  const hasta = document.getElementById('repHasta').value;
+  if(!desde || !hasta){ mostrarToast('Selecciona el rango de fechas', true); return; }
+
+  const [movsTodos, polizasTodas] = await Promise.all([
+    api({accion:'leer_local', tab:'movs'}),
+    api({accion:'leer_local', tab:'polizas'}),
+  ]);
+
+  const movs = movsTodos
+    .filter(m => m.Fecha >= desde && m.Fecha <= hasta)
+    .sort((a,b) => String(b.Fecha).localeCompare(String(a.Fecha)));
+  const polizasCerradas = polizasTodas
+    .filter(p => p.Estado === 'finalizada' && p.FechaVencimiento >= desde && p.FechaVencimiento <= hasta)
+    .sort((a,b) => String(b.FechaVencimiento).localeCompare(String(a.FechaVencimiento)));
+
+  MOVS_REPORTE_ACTUAL = movs;
+  POLIZAS_REPORTE_ACTUAL = polizasCerradas;
+
+  // ── Totales contables del período ──
+  let depositos = 0, retiros = 0, interesAhorros = 0, interesPolizas = 0, capitalPolizas = 0;
+  movs.forEach(m => {
+    const cat = categorizarMovimiento(m);
+    const monto = parseFloat(m.Monto || 0);
+    if (cat === 'Depósito de ahorro') depositos += monto;
+    else if (cat === 'Retiro de ahorro') retiros += monto;
+    else if (cat === 'Interés pagado (ahorros)') interesAhorros += monto;
+    else if (cat === 'Interés pagado (póliza)') interesPolizas += monto;
+    else if (cat === 'Devolución de capital (póliza)') capitalPolizas += monto;
+  });
+  const gastoFinancieroTotal = interesAhorros + interesPolizas;
+  const captacionNeta = depositos - retiros;
+
+  document.getElementById('cardsReporteFinanciero').innerHTML = `
+    <div class="card"><div class="label">Depósitos de ahorro</div><div class="value">${money(depositos)}</div></div>
+    <div class="card red"><div class="label">Retiros de ahorro</div><div class="value">${money(retiros)}</div></div>
+    <div class="card green"><div class="label">Captación neta (depósitos − retiros)</div><div class="value">${money(captacionNeta)}</div></div>
+    <div class="card"><div class="label">Interés pagado en ahorros</div><div class="value">${money(interesAhorros)}</div></div>
+    <div class="card"><div class="label">Capital devuelto por pólizas</div><div class="value">${money(capitalPolizas)}</div></div>
+    <div class="card"><div class="label">Interés pagado en pólizas</div><div class="value">${money(interesPolizas)}</div></div>
+    <div class="card red"><div class="label">Gasto financiero total (todo el interés pagado)</div><div class="value">${money(gastoFinancieroTotal)}</div></div>
+    <div class="card"><div class="label">Pólizas finalizadas en el período</div><div class="value">${polizasCerradas.length}</div></div>
+  `;
+
+  document.querySelector('#tblMovsReporte tbody').innerHTML = movs.map(m=>{
+    const cat = categorizarMovimiento(m);
+    const tagClass = cat.includes('Retiro') ? 'bad' : (cat.includes('Interés') ? 'warn' : 'ok');
+    return `<tr><td>${m.Fecha}</td><td>${m.Nombre}</td><td><span class="tag ${tagClass}">${cat}</span></td><td>${money(m.Monto)}</td><td>${m.Descripcion||''}</td></tr>`;
+  }).join('') || '<tr><td colspan="5" class="muted">No hay movimientos en ese rango de fechas</td></tr>';
+
+  document.querySelector('#tblPolizasReporte tbody').innerHTML = polizasCerradas.map(p=>`
+    <tr><td>${p.Nombre}</td><td>${money(p.Monto)}</td><td>${p.TasaAnual}%</td><td>${p.PlazoMeses} meses</td><td>${p.FechaVencimiento}</td></tr>
+  `).join('') || '<tr><td colspan="5" class="muted">No se finalizó ninguna póliza en ese rango de fechas</td></tr>';
+}
+
+function descargarCSV(nombreArchivo, encabezados, filas){
+  const escapar = v => '"' + String(v===undefined||v===null?'':v).replace(/"/g,'""') + '"';
+  const contenido = [encabezados.map(escapar).join(',')]
+    .concat(filas.map(f => f.map(escapar).join(',')))
+    .join('\r\n');
+  const blob = new Blob(['\uFEFF' + contenido], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = nombreArchivo;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function descargarMovimientosCSV(){
+  if(!MOVS_REPORTE_ACTUAL.length){ mostrarToast('Genera el reporte primero', true); return; }
+  const filas = MOVS_REPORTE_ACTUAL.map(m => [m.Fecha, m.Nombre, m.Cedula, categorizarMovimiento(m), m.Monto, m.SaldoAnterior, m.SaldoResultante, m.Descripcion, m.RegistradoPor]);
+  descargarCSV('movimientos_ahorro.csv', ['Fecha','Socio','Cédula','Categoría','Monto','Saldo anterior','Saldo resultante','Descripción','Registrado por'], filas);
+}
+
+function descargarPolizasCSV(){
+  if(!POLIZAS_REPORTE_ACTUAL.length){ mostrarToast('No hay pólizas finalizadas en el rango actual', true); return; }
+  const filas = POLIZAS_REPORTE_ACTUAL.map(p => [p.Nombre, p.Cedula, p.Monto, p.TasaAnual, p.PlazoMeses, p.FechaInicio, p.FechaVencimiento]);
+  descargarCSV('polizas_finalizadas.csv', ['Socio','Cédula','Capital','Tasa anual %','Plazo (meses)','Fecha inicio','Fecha vencimiento'], filas);
+}
+
+/* ============================================================
+   LISTADOS DE SOCIOS
    ============================================================ */
 async function reporte(tipo){
   const tbl = document.getElementById('tblReporte');
-  if(tipo==='ahorros'){
-    const movs = await api({accion:'leer_local', tab:'movs'});
-    tbl.querySelector('thead').innerHTML = '<tr><th>Fecha</th><th>Socio</th><th>Tipo</th><th>Monto</th><th>Saldo resultante</th></tr>';
-    tbl.querySelector('tbody').innerHTML = movs.map(m=>`<tr><td>${m.Fecha}</td><td>${m.Nombre}</td><td>${m.Tipo}</td><td>${money(m.Monto)}</td><td>${money(m.SaldoResultante)}</td></tr>`).join('');
-  } else if(tipo==='polizas'){
-    const polizas = await api({accion:'leer_local', tab:'polizas'});
-    tbl.querySelector('thead').innerHTML = '<tr><th>Socio</th><th>Monto</th><th>Tasa</th><th>Vence</th><th>Estado</th></tr>';
-    tbl.querySelector('tbody').innerHTML = polizas.map(p=>`<tr><td>${p.Nombre}</td><td>${money(p.Monto)}</td><td>${p.TasaAnual}%</td><td>${p.FechaVencimiento}</td><td>${p.Estado}</td></tr>`).join('');
-  } else if(tipo==='capitalistas'){
+  if(tipo==='capitalistas'){
     const accesos = await api({accion:'leer_local', tab:'accesos'});
     const cap = accesos.filter(a=>a.TipoSocio==='capitalista');
     tbl.querySelector('thead').innerHTML = '<tr><th>Cédula</th><th>Nombre</th><th>Último acceso</th><th>Estado</th></tr>';
