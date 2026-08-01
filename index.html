@@ -244,7 +244,12 @@
         </div>
       </div>
       <div class="panel">
-        <h3>Pólizas registradas</h3>
+        <div class="flex-between">
+          <h3 style="margin:0;border:none;padding:0">Pólizas registradas</h3>
+          <button class="btn-gold" onclick="cerrarPolizasVencidasUI()">Cerrar pólizas vencidas ahora</button>
+        </div>
+        <p class="muted" style="margin:8px 0 14px">Al vencer una póliza, el capital y el interés generado se depositan automáticamente en los ahorros del socio y quedan registrados como transacciones. Esto ya ocurre solo cuando el socio entra a la Caja en Línea o cuando abres este panel; este botón lo fuerza de inmediato.</p>
+        <div id="cerrarPolizasMsg" class="muted" style="margin-bottom:10px"></div>
         <div style="overflow:auto"><table id="tblPolizas"><thead><tr><th>Socio</th><th>Monto</th><th>Tasa</th><th>Plazo</th><th>Inicio</th><th>Vence</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
       </div>
     </section>
@@ -581,8 +586,15 @@ async function cargarPolizas(){
   document.querySelector('#tblPolizas tbody').innerHTML = polizas.map(p=>`
     <tr><td>${p.Nombre}</td><td>${money(p.Monto)}</td><td>${p.TasaAnual}%</td><td>${p.PlazoMeses} meses</td>
     <td>${p.FechaInicio}</td><td>${p.FechaVencimiento}</td>
-    <td><span class="tag ${p.Estado==='activa'?'ok':'warn'}">${p.Estado}</span></td></tr>
+    <td><span class="tag ${p.Estado==='activa'||p.Estado==='finalizada'?'ok':'warn'}">${p.Estado}</span></td></tr>
   `).join('') || '<tr><td colspan="7" class="muted">No hay pólizas registradas</td></tr>';
+}
+
+async function cerrarPolizasVencidasUI(){
+  const r = await api({accion:'cerrar_polizas_vencidas'});
+  document.getElementById('cerrarPolizasMsg').textContent = `Se cerraron ${r.polizasCerradas} póliza(s) vencida(s). El capital y el interés ya quedaron depositados en los ahorros correspondientes.`;
+  mostrarToast('Revisión de pólizas completada');
+  cargarPolizas();
 }
 
 /* ============================================================
